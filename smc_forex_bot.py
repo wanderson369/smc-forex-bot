@@ -464,3 +464,12 @@ def processar_cmd(texto, cid):
         par=next((p for p in TODOS_PARES if p.replace("/","")==arg.replace("/","") or p==arg),None)
         if not arg: enviar("⚠️ Use: /addfav EURUSD",cid)
         elif not par: enviar(f"⚠️ Par nao encontrado: {arg}",cid)
+elif par in CONFIG["meus_favoritos"]:
+            enviar(f"⚠️ {par} ja esta nos favoritos.", cid)
+        else:
+            with lock:
+                CONFIG["meus_favoritos"].append(par)
+            enviar(f"⭐ {par} adicionado aos favoritos!", cid)
+
+    else:
+        enviar("⚠️ Comando nao reconhecido. Use /ajuda", cid)
