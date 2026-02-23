@@ -463,4 +463,4 @@ def processar_cmd(texto, cid):
     elif cmd=="/addfav":
         par=next((p for p in TODOS_PARES if p.replace("/","")==arg.replace("/","") or p==arg),None)
         if not arg: enviar("⚠️ Use: /addfav EURUSD",cid)
-        elif not par: enviar(f"⚠️ Par nao encontrado: {arg}",cid
+        elif not par: enviar(f"⚠️ Par nao encontrado: {arg}",cid)
