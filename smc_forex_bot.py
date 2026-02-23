@@ -47,8 +47,24 @@ GESTÃO:
 """
 
 import os, time, requests
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from collections import deque
+
+# Fuso horário de Brasília (UTC-3)
+BRT = timezone(timedelta(hours=-3))
+
+def agora_brt():
+    return datetime.now(BRT).strftime("%d/%m %H:%M")
+
+def converter_hora(dt_str):
+    """Converte horário da API (UTC) para Brasília"""
+    try:
+        dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+        dt_utc = dt.replace(tzinfo=timezone.utc)
+        dt_brt = dt_utc.astimezone(BRT)
+        return dt_brt.strftime("%d/%m %H:%M")
+    except:
+        return dt_str
 
 # ============================================================
 # CONFIGURAÇÕES
@@ -86,7 +102,7 @@ sinais_enviados    = {}
 historico_sinais   = deque(maxlen=200)
 ultima_verificacao = {}
 ultimo_update_id   = 0
-inicio             = datetime.now().strftime("%d/%m/%Y %H:%M")
+inicio = datetime.now(BRT).strftime("%d/%m/%Y %H:%M")
 total_sinais       = 0
 
 # ============================================================
@@ -733,7 +749,7 @@ def formatar(s):
         f"  RR alvo: {rr}\n"
         f"  Risco: máx 1-2% do capital\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🕐 {s['horario']}\n"
+        f"🕐 {converter_hora(s['horario'])} (Brasília)\n"
         f"<i>Confirme sempre antes de entrar</i>"
     )
 
@@ -872,7 +888,7 @@ def processar_comandos():
                 for s in list(reversed(list(historico_sinais)))[:10]:
                     e   = "🟢" if s["direcao"] == "COMPRA" else "🔴"
                     par = TODOS_PARES.get(s["par"], s["par"])
-                    linhas.append(f"{e} {par} | {s['tf']} | {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']} | {s['horario'][-5:]}")
+                    linhas.append(f"{e} {par} | {s['tf']} | {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']} | {converter_hora(s['horario'])}")
                 enviar("\n".join(linhas), cid)
 
         elif cmd == "/addtf":
