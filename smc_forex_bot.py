@@ -45,24 +45,28 @@ PARES_FOREX = {
     "XAU/USD": "XAU/USD", "XAG/USD": "XAG/USD",
 }
 
+# Crypto com USDT (formato correto na Twelve Data)
 PARES_CRYPTO = {
-    "BTC/USD": "BTC/USD", "ETH/USD": "ETH/USD", "BNB/USD": "BNB/USD",
-    "XRP/USD": "XRP/USD", "SOL/USD": "SOL/USD",
+    "BTC/USDT": "BTC/USDT",
+    "ETH/USDT": "ETH/USDT",
+    "BNB/USDT": "BNB/USDT",
+    "XRP/USDT": "XRP/USDT",
+    "SOL/USDT": "SOL/USDT",
 }
 
 TODOS_PARES = {**PARES_FOREX, **PARES_CRYPTO}
 
 CONFIG = {
     "velas_analisar":    80,
-    "min_movimento_bos": 0.0003,
-    "lg_sombra_ratio":   1.8,
+    "min_movimento_bos": 0.0001,
+    "lg_sombra_ratio":   1.3,
     "pausado":           False,
     "timeframes_ativos": ["15min", "1h"],
     "pares_ativos":      list(TODOS_PARES.keys()),
-    "prob_minima":       58,
+    "prob_minima":       52,
     "filtro_pares":      [],
     "filtro_direcao":    "",
-    "filtro_prob":       58,
+    "filtro_prob":       52,
     "meus_favoritos":    [],
 }
 
@@ -156,12 +160,12 @@ def detectar_bos(candles, par):
     mov = abs(at["close"] - at["open"])
     maxima = max(v["high"] for v in candles[-21:-1])
     minima = min(v["low"]  for v in candles[-21:-1])
-    if at["close"] > maxima and mov >= mn:
+    if at["close"] > maxima:
         f = min(90, 62 + int(((at["close"] - maxima) / max(maxima, 0.0001)) * 8000))
         sinais.append({"padrao": "BOS", "sub": "ALTA", "dir": "COMPRA",
             "nivel": maxima, "prob_base": f,
             "desc": f"Rompimento bullish — fechamento acima de {maxima:.5f}"})
-    if at["close"] < minima and mov >= mn:
+    if at["close"] < minima:
         f = min(90, 62 + int(((minima - at["close"]) / max(minima, 0.0001)) * 8000))
         sinais.append({"padrao": "BOS", "sub": "BAIXA", "dir": "VENDA",
             "nivel": minima, "prob_base": f,
@@ -284,7 +288,7 @@ def detectar_ob(candles):
     at  = candles[-1]; ob = candles[-2]; pre = candles[-3]
     med = sum(abs(v["close"]-v["open"]) for v in candles[-7:-1]) / 6
     cat = abs(at["close"] - at["open"])
-    if cat < med * 1.2: return []
+    if cat < med * 0.8: return []
     if at["close"]>at["open"] and ob["close"]<ob["open"] and ob["low"]<pre["low"] and at["low"]>ob["high"]:
         sinais.append({"padrao": "Order Block", "sub": "BULLISH VALIDO", "dir": "COMPRA",
             "nivel": ob["low"], "prob_base": 72,
@@ -293,11 +297,11 @@ def detectar_ob(candles):
         sinais.append({"padrao": "Order Block", "sub": "BEARISH VALIDO", "dir": "VENDA",
             "nivel": ob["high"], "prob_base": 72,
             "desc": f"OB Bearish com imbalance e sweep: {ob['low']:.5f}-{ob['high']:.5f}"})
-    elif at["close"]>at["open"] and ob["close"]<ob["open"] and cat>med*1.5:
+    elif at["close"]>at["open"] and ob["close"]<ob["open"] and cat>med*1.0:
         sinais.append({"padrao": "Order Block", "sub": "BULLISH", "dir": "COMPRA",
             "nivel": ob["low"], "prob_base": 62,
             "desc": f"OB Bullish: {ob['low']:.5f}-{ob['high']:.5f}"})
-    elif at["close"]<at["open"] and ob["close"]>ob["open"] and cat>med*1.5:
+    elif at["close"]<at["open"] and ob["close"]>ob["open"] and cat>med*1.0:
         sinais.append({"padrao": "Order Block", "sub": "BEARISH", "dir": "VENDA",
             "nivel": ob["high"], "prob_base": 62,
             "desc": f"OB Bearish: {ob['low']:.5f}-{ob['high']:.5f}"})
@@ -814,9 +818,9 @@ def main():
                         print(f"  SINAL: {s['direcao']} {s['par']} {tf_n} "
                               f"{s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
                         enviar(formatar(s))
-                    time.sleep(2)
+                    time.sleep(8)  # 8s entre pares — respeita 8req/min da API gratuita
 
-        time.sleep(10)
+        time.sleep(5)  # Verifica comandos a cada 5s
 
 if __name__ == "__main__":
     main()
