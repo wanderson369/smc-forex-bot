@@ -501,13 +501,10 @@ def detectar_fvg(candles):
     return sinais
 
 def detectar_flip(candles):
-    """
-    FLiP Zone — Supply que virou Demand (S2D) ou Demand que virou Supply (D2S)
-    Quando preço rompe uma zona e volta para retestá-la = entrada de alta probabilidade
-    """
-    if len(candles) < 15: return []
-    sinais = []
-    at = candles[-1]
+    # MESMA LÓGICA, só adicionei:
+"desc": f"Supply virou Demand em {zona_high:.5f} — reteste bullish"
+# e
+"desc": f"Demand virou Supply em {zona_low:.5f} — reteste bearish"
 
     # Procura por zonas que foram rompidas e estão sendo retestadas
     for i in range(5, 15):
