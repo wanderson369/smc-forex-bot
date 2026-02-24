@@ -81,7 +81,6 @@ TODOS_PARES = {
     "EUR/GBP": "EUR/GBP", "EUR/JPY": "EUR/JPY", "GBP/JPY": "GBP/JPY",
     "AUD/JPY": "AUD/JPY", "EUR/AUD": "EUR/AUD", "GBP/AUD": "GBP/AUD",
     "XAU/USD": "XAU/USD",
-    "BTC/USDT": "BTC/USDT",
 }
 
 CONFIG = {
