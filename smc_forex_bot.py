@@ -1,4 +1,3 @@
-
 SMC Forex Bot v5 — Metodologia Completa
 ==========================================
 Baseado no ebook SMC Trading Hub 2023
