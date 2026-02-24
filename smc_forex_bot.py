@@ -79,7 +79,7 @@ TODOS_PARES = {
     "NZD/USD": "NZD/USD", "GBP/CAD": "GBP/CAD",
     "EUR/GBP": "EUR/GBP", "EUR/JPY": "EUR/JPY", "GBP/JPY": "GBP/JPY",
     "AUD/JPY": "AUD/JPY", "EUR/AUD": "EUR/AUD", "GBP/AUD": "GBP/AUD",
-    "XAU/USD": "XAU/USD", "XAG/USD": "XAG/USD",
+    "XAU/USD": "XAU/USD", 
     "BTC/USDT": "BTC/USDT",
 }
 
