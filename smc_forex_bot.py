@@ -79,7 +79,7 @@ TODOS_PARES = {
     "NZD/USD": "NZD/USD", "GBP/CAD": "GBP/CAD",
     "EUR/GBP": "EUR/GBP", "EUR/JPY": "EUR/JPY", "GBP/JPY": "GBP/JPY",
     "AUD/JPY": "AUD/JPY", "EUR/AUD": "EUR/AUD", "GBP/AUD": "GBP/AUD",
-    "XAU/USD": "XAU/USD",
+    "XAU/USD": "XAU/USD", "XAG/USD": "XAG/USD",
     "BTC/USDT": "BTC/USDT",
 }
 
@@ -530,4 +530,465 @@ def detectar_flip(candles):
             at["close"] < zona_low and
             candles[-3]["close"] < zona_low):
             sinais.append({
-             
+                "padrao": "FLiP D2S", "dir": "VENDA",
+                "nivel": zona_low, "prob_base": 70,
+                "desc": f"Demand virou Supply em {zona_low:.5f} — reteste de zona rompida (alta probabilidade)"
+            })
+            break
+
+    return sinais
+
+def detectar_lg(candles):
+    """Liquidity Grab — caçada de stops com rejeição"""
+    if len(candles) < 12: return []
+    sinais = []
+    max_rec = max(v["high"] for v in candles[-12:-2])
+    min_rec = min(v["low"]  for v in candles[-12:-2])
+    sp = candles[-2]
+    at = candles[-1]
+    a  = info(sp)
+    co = max(a["corpo"], 0.00001)
+
+    if (sp["high"] > max_rec and a["ss"] > co * CONFIG["lg_sombra_ratio"] and
+        sp["close"] < max_rec and at["close"] < sp["low"]):
+        sinais.append({
+            "padrao": "Liquidity Grab", "sub": "BEARISH", "dir": "VENDA",
+            "nivel": max_rec, "prob_base": 76,
+            "desc": f"Stop hunt acima de {max_rec:.5f} — rejeição confirmada, queda iminente"
+        })
+
+    if (sp["low"] < min_rec and a["si"] > co * CONFIG["lg_sombra_ratio"] and
+        sp["close"] > min_rec and at["close"] > sp["high"]):
+        sinais.append({
+            "padrao": "Liquidity Grab", "sub": "BULLISH", "dir": "COMPRA",
+            "nivel": min_rec, "prob_base": 76,
+            "desc": f"Stop hunt abaixo de {min_rec:.5f} — rejeição confirmada, alta iminente"
+        })
+
+    return sinais
+
+# ============================================================
+# CANDLES JAPONESES (complemento — aumentam probabilidade)
+# ============================================================
+def detectar_candles(c):
+    if len(c) < 4: return []
+    padroes = []
+    v1,v2,v3,v4 = c[-4],c[-3],c[-2],c[-1]
+    a1,a2,a3,a4 = info(v1),info(v2),info(v3),info(v4)
+
+    if a4["si"]>a4["corpo"]*2 and a4["cp"]<0.4 and a4["ss"]<a4["corpo"]:
+        padroes.append({"nome":"Pin Bar Bullish","emoji":"📌🟢","dir":"COMPRA","bonus":10,"desc":"Sombra inferior longa — rejeição de mínimas"})
+    if a4["ss"]>a4["corpo"]*2 and a4["cp"]<0.4 and a4["si"]<a4["corpo"]:
+        padroes.append({"nome":"Pin Bar Bearish","emoji":"📌🔴","dir":"VENDA","bonus":10,"desc":"Sombra superior longa — rejeição de máximas"})
+    if a3["baixa"] and a4["alta"] and v4["open"]<=v3["close"] and v4["close"]>=v3["open"]:
+        padroes.append({"nome":"Engolfo Bullish","emoji":"🟢🔥","dir":"COMPRA","bonus":13,"desc":"Vela de alta engolfa a baixa anterior"})
+    if a3["alta"] and a4["baixa"] and v4["open"]>=v3["close"] and v4["close"]<=v3["open"]:
+        padroes.append({"nome":"Engolfo Bearish","emoji":"🔴🔥","dir":"VENDA","bonus":13,"desc":"Vela de baixa engolfa a alta anterior"})
+    if (a3["baixa"] and a4["alta"] and v4["open"]>v3["close"] and v4["close"]<v3["open"] and a4["corpo"]<a3["corpo"]*0.5):
+        padroes.append({"nome":"Harami Bullish","emoji":"👶🟢","dir":"COMPRA","bonus":7,"desc":"Vela interna — possível reversão"})
+    if (a3["alta"] and a4["baixa"] and v4["open"]<v3["close"] and v4["close"]>v3["open"] and a4["corpo"]<a3["corpo"]*0.5):
+        padroes.append({"nome":"Harami Bearish","emoji":"👶🔴","dir":"VENDA","bonus":7,"desc":"Vela interna — possível reversão"})
+    if (a2["baixa"] and a3["cp"]<0.1 and v3["high"]<v2["low"] and a4["alta"] and v4["open"]>v3["high"]):
+        padroes.append({"nome":"Bebê Abandonado Bullish","emoji":"👶✨🟢","dir":"COMPRA","bonus":18,"desc":"Doji com gaps — reversão de altíssima probabilidade"})
+    if (a2["alta"] and a3["cp"]<0.1 and v3["low"]>v2["high"] and a4["baixa"] and v4["open"]<v3["low"]):
+        padroes.append({"nome":"Bebê Abandonado Bearish","emoji":"👶✨🔴","dir":"VENDA","bonus":18,"desc":"Doji com gaps — reversão de altíssima probabilidade"})
+    if a3["alta"] and a4["ss"]>a4["corpo"]*2 and a4["si"]<a4["corpo"]*0.5:
+        padroes.append({"nome":"Estrela Cadente","emoji":"🌠🔴","dir":"VENDA","bonus":9,"desc":"Sombra superior após alta — topo"})
+    if a3["baixa"] and a4["si"]>a4["corpo"]*2 and a4["ss"]<a4["corpo"]*0.5:
+        padroes.append({"nome":"Martelo","emoji":"🔨🟢","dir":"COMPRA","bonus":9,"desc":"Sombra inferior após baixa — fundo"})
+    if a4["cp"] < 0.05:
+        padroes.append({"nome":"Doji","emoji":"➕","dir":"NEUTRO","bonus":4,"desc":"Indecisão — aguardar confirmação"})
+    if (a2["alta"] and a3["alta"] and a4["alta"] and v3["close"]>v2["close"] and v4["close"]>v3["close"] and a2["cp"]>0.6 and a3["cp"]>0.6 and a4["cp"]>0.6):
+        padroes.append({"nome":"Três Soldados Brancos","emoji":"⚔️🟢","dir":"COMPRA","bonus":14,"desc":"Três altas fortes — tendência"})
+    if (a2["baixa"] and a3["baixa"] and a4["baixa"] and v3["close"]<v2["close"] and v4["close"]<v3["close"] and a2["cp"]>0.6 and a3["cp"]>0.6 and a4["cp"]>0.6):
+        padroes.append({"nome":"Três Corvos Negros","emoji":"🦅🔴","dir":"VENDA","bonus":14,"desc":"Três baixas fortes — tendência"})
+
+    return padroes
+
+# ============================================================
+# MOTOR PRINCIPAL DE ANÁLISE
+# ============================================================
+def analisar_par(par, tf):
+    candles = buscar_candles(par, tf, CONFIG["velas_analisar"])
+    if len(candles) < 20: return []
+
+    at = candles[-1]
+
+    # === Detecta zona (Premium/Desconto) ===
+    zona, posicao_pct = zona_premium_desconto(candles, at["close"])
+
+    # === Coleta todos os padrões SMC ===
+    smc_list = (
+        detectar_bos(candles)     +
+        detectar_fbos(candles)    +
+        detectar_choch(candles)   +
+        detectar_ob(candles)      +
+        detectar_fvg(candles)     +
+        detectar_flip(candles)    +
+        detectar_lg(candles)      +
+        detectar_idm(candles)     +
+        detectar_ifc(candles)     +
+        detectar_eqh_eql(candles) +
+        detectar_pdh_pdl(candles)
+    )
+
+    # === Detecta candles japoneses (bônus) ===
+    can_list = detectar_candles(candles)
+
+    # === Monta sinais por direção ===
+    sinais_finais = []
+
+    for smc in smc_list:
+        direcao = smc["dir"]
+        prob    = smc["prob_base"]
+
+        # Bônus/Penalidade por zona Premium/Desconto
+        # Regra SMC: compra só em desconto, venda só em premium
+        if direcao == "COMPRA" and zona == "DESCONTO":
+            prob += 8   # zona correta para compra
+        elif direcao == "VENDA" and zona == "PREMIUM":
+            prob += 8   # zona correta para venda
+        elif direcao == "COMPRA" and zona == "PREMIUM":
+            prob -= 10  # compra em zona de premium = perigoso
+        elif direcao == "VENDA" and zona == "DESCONTO":
+            prob -= 10  # venda em zona de desconto = perigoso
+
+        # Bônus por candles na mesma direção
+        can_favor = [c for c in can_list if c["dir"] in [direcao, "NEUTRO"]]
+        prob += sum(c["bonus"] for c in can_favor)
+
+        # Bônus por múltiplos SMC confirmando
+        outros_smc = [s for s in smc_list if s["dir"] == direcao and s["padrao"] != smc["padrao"]]
+        prob += len(outros_smc) * 5
+
+        prob = min(95, max(50, prob))
+
+        if prob < CONFIG["prob_minima"]: continue
+
+        sinais_finais.append({
+            "par": par, "tf": tf, "direcao": direcao,
+            "preco": at["close"], "horario": at["datetime"],
+            "prob": prob, "zona": zona, "zona_pct": posicao_pct,
+            "smc_principal": smc,
+            "outros_smc":    outros_smc,
+            "candles":       can_favor,
+        })
+
+    # Remove duplicatas — mantém maior probabilidade por direção
+    unicos = {}
+    for s in sinais_finais:
+        chave = f"{s['par']}_{s['tf']}_{s['direcao']}"
+        if chave not in unicos or s["prob"] > unicos[chave]["prob"]:
+            unicos[chave] = s
+
+    return list(unicos.values())
+
+# ============================================================
+# FILTROS
+# ============================================================
+def passar_filtros(sinal):
+    par_limpo = TODOS_PARES.get(sinal["par"], sinal["par"])
+    if CONFIG["filtro_pares"]   and par_limpo != sinal["par"] and par_limpo not in CONFIG["filtro_pares"]: return False
+    if CONFIG["meus_favoritos"] and par_limpo not in CONFIG["meus_favoritos"]: return False
+    if CONFIG["filtro_direcao"] and sinal["direcao"] != CONFIG["filtro_direcao"]: return False
+    if sinal["prob"] < CONFIG["filtro_prob"]: return False
+    return True
+
+# ============================================================
+# FORMATAÇÃO DO ALERTA
+# ============================================================
+def barra(prob):
+    f = int(prob / 10)
+    return "█" * f + "░" * (10 - f)
+
+def emoji_zona(zona):
+    return {"PREMIUM": "🔴 PREMIUM", "DESCONTO": "🟢 DESCONTO", "EQUILIBRIO": "⚖️ EQUILÍBRIO"}.get(zona, zona)
+
+def formatar(s):
+    emoji  = "🟢📈" if s["direcao"] == "COMPRA" else "🔴📉"
+    par    = TODOS_PARES.get(s["par"], s["par"])
+    prob   = s["prob"]
+    conf   = "🔥 MUITO ALTO" if prob >= 85 else "✅ ALTO" if prob >= 70 else "⚡ MÉDIO" if prob >= 60 else "⚠️ BAIXO"
+    smc    = s["smc_principal"]
+    zona_t = emoji_zona(s["zona"])
+
+    # Outros padrões SMC confirmando
+    outros_txt = ""
+    if s["outros_smc"]:
+        outros_txt = "\n🔹 <b>Confluências SMC:</b>\n"
+        outros_txt += "\n".join(f"  • {x['padrao']}: {x['desc'][:60]}" for x in s["outros_smc"][:3])
+
+    # Candles como complemento
+    can_txt = ""
+    if s["candles"]:
+        can_txt = "\n\n🕯 <b>Confirmação de Candle:</b>\n"
+        can_txt += "\n".join(f"  {x['emoji']} {x['nome']}" for x in s["candles"][:3])
+
+    # Sugestão de gestão de risco
+    rr   = "1:5 a 1:10 (excelente)"
+    stop = "Abaixo do OB/FVG" if s["direcao"] == "COMPRA" else "Acima do OB/FVG"
+
+    return (
+        f"{emoji} <b>SINAL SMC — {par}</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"💱 <b>Par:</b>       {par}\n"
+        f"⏱ <b>Timeframe:</b> {s['tf'].upper()}\n"
+        f"🎯 <b>Direção:</b>   {s['direcao']}\n"
+        f"💰 <b>Preço:</b>     {s['preco']:.5f}\n"
+        f"🗺 <b>Zona:</b>     {zona_t} ({s['zona_pct']:.0f}%)\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📊 <b>Probabilidade: {prob}%</b>\n"
+        f"{barra(prob)} {conf}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📐 <b>Padrão Principal:</b>\n"
+        f"  🔹 {smc['padrao']} {smc.get('sub','')}\n"
+        f"      {smc['desc']}\n"
+        f"{outros_txt}{can_txt}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"⚠️ <b>Gestão de Risco:</b>\n"
+        f"  Stop: {stop}\n"
+        f"  RR alvo: {rr}\n"
+        f"  Risco: máx 1-2% do capital\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🕐 {converter_hora(s['horario'])} (Brasília)\n"
+        f"<i>Confirme sempre antes de entrar</i>"
+    )
+
+# ============================================================
+# TELEGRAM
+# ============================================================
+def enviar(msg, chat_id=None):
+    if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI":
+        print(f"[TG]\n{msg}\n"); return
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            json={"chat_id": chat_id or TELEGRAM_CHAT_ID, "text": msg,
+                  "parse_mode": "HTML", "disable_web_page_preview": True},
+            timeout=10)
+    except Exception as e:
+        print(f"Erro TG: {e}")
+
+def buscar_updates():
+    global ultimo_update_id
+    if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI": return []
+    try:
+        r = requests.get(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates",
+            params={"offset": ultimo_update_id + 1, "timeout": 3}, timeout=8)
+        upds = r.json().get("result", [])
+        if upds: ultimo_update_id = upds[-1]["update_id"]
+        return upds
+    except: return []
+
+# ============================================================
+# COMANDOS TELEGRAM
+# ============================================================
+def processar_comandos():
+    for u in buscar_updates():
+        msg   = u.get("message", {})
+        texto = msg.get("text", "").strip()
+        cid   = str(msg.get("chat", {}).get("id", ""))
+        if not texto.startswith("/"): continue
+        partes = texto.split(maxsplit=1)
+        cmd    = partes[0].lower().split("@")[0]
+        arg    = partes[1].strip().upper() if len(partes) > 1 else ""
+        print(f"[CMD] {texto}")
+
+        if cmd == "/start":
+            enviar(
+                "🤖 <b>SMC Forex Bot v4.0</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "📚 Metodologia completa SMC:\n"
+                "BOS · FBOS · CHoCH · IDM · SMT\n"
+                "OB · FVG · FLiP · IFC · EQH/EQL\n"
+                "PDH/PDL · Session Liquidity\n"
+                "Zonas Premium e Desconto\n\n"
+                "🕯 Candles como complemento:\n"
+                "Pin Bar · Engolfo · Harami\n"
+                "Bebê Abandonado · 3 Soldados/Corvos\n\n"
+                "📋 <b>Comandos:</b>\n"
+                "/pares · /favoritos · /addfav · /delfav\n"
+                "/filtrar · /limpar · /status · /sinais\n"
+                "/pausar · /retomar · /ajuda", cid)
+
+        elif cmd == "/pares":
+            linhas = ["💱 <b>17 Pares Monitorados</b>\n━━━━━━━━━━━━━━━━━━━━━━━"]
+            linhas.append("\n<b>Majors USD:</b>")
+            for p in ["EURUSD","GBPUSD","USDJPY","AUDUSD","USDCHF","USDCAD"]: linhas.append(f"  • {p}")
+            linhas.append("\n<b>Cruzamentos:</b>")
+            for p in ["EURGBP","EURJPY","GBPJPY","AUDJPY","EURAUD","GBPAUD","AUDCHF","EURCHF","GBPCHF"]: linhas.append(f"  • {p}")
+            linhas.append("\n<b>Metais:</b>")
+            for p in ["XAUUSD","XAGUSD"]: linhas.append(f"  • {p}")
+            enviar("\n".join(linhas), cid)
+
+        elif cmd == "/favoritos":
+            if not CONFIG["meus_favoritos"]:
+                enviar("📭 Nenhum favorito.\nUse /addfav EURUSD", cid)
+            else:
+                lista = "\n".join(f"  ⭐ {p}" for p in CONFIG["meus_favoritos"])
+                enviar(f"⭐ <b>Meus Favoritos</b>\n{lista}", cid)
+
+        elif cmd == "/addfav":
+            if not arg: enviar("⚠️ Use: /addfav EURUSD", cid)
+            elif arg not in list(TODOS_PARES.values()): enviar(f"⚠️ Par inválido. Use /pares para ver a lista.", cid)
+            elif arg in CONFIG["meus_favoritos"]: enviar(f"⚠️ {arg} já está nos favoritos.", cid)
+            else:
+                CONFIG["meus_favoritos"].append(arg)
+                enviar(f"⭐ {arg} adicionado! Total: {len(CONFIG['meus_favoritos'])}", cid)
+
+        elif cmd == "/delfav":
+            if arg in CONFIG["meus_favoritos"]:
+                CONFIG["meus_favoritos"].remove(arg); enviar(f"✅ {arg} removido.", cid)
+            else: enviar(f"⚠️ {arg} não está nos favoritos.", cid)
+
+        elif cmd == "/filtrar":
+            if not arg:
+                enviar("⚙️ <b>Como usar /filtrar:</b>\n\n"
+                    "/filtrar EURUSD → só EURUSD\n"
+                    "/filtrar XAUUSD → só Ouro\n"
+                    "/filtrar COMPRA → só compras\n"
+                    "/filtrar VENDA  → só vendas\n"
+                    "/filtrar 70     → só prob ≥ 70%\n\n"
+                    "Use /limpar para remover filtros.", cid)
+            elif arg in ["COMPRA","VENDA"]:
+                CONFIG["filtro_direcao"] = arg
+                enviar(f"✅ Filtro: só sinais de <b>{arg}</b>", cid)
+            elif arg.isdigit() and 50 <= int(arg) <= 95:
+                CONFIG["filtro_prob"] = int(arg)
+                enviar(f"✅ Filtro: só prob ≥ <b>{arg}%</b>", cid)
+            elif arg in list(TODOS_PARES.values()):
+                if arg not in CONFIG["filtro_pares"]: CONFIG["filtro_pares"].append(arg)
+                enviar(f"✅ Filtro: <b>{arg}</b> ativo.", cid)
+            else: enviar("⚠️ Valor inválido. Use /filtrar para ver exemplos.", cid)
+
+        elif cmd == "/limpar":
+            CONFIG["filtro_pares"] = []; CONFIG["filtro_direcao"] = ""; CONFIG["filtro_prob"] = CONFIG["prob_minima"]
+            enviar("🧹 Filtros limpos! Recebendo todos os sinais.", cid)
+
+        elif cmd == "/status":
+            filtros = []
+            if CONFIG["filtro_pares"]:    filtros.append(f"Pares: {', '.join(CONFIG['filtro_pares'])}")
+            if CONFIG["filtro_direcao"]:  filtros.append(f"Direção: {CONFIG['filtro_direcao']}")
+            if CONFIG["filtro_prob"] > CONFIG["prob_minima"]: filtros.append(f"Prob: ≥{CONFIG['filtro_prob']}%")
+            enviar(
+                f"📊 <b>Status SMC Bot v4.0</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Estado    : {'⏸ Pausado' if CONFIG['pausado'] else '▶️ Ativo'}\n"
+                f"Online    : {inicio}\n"
+                f"Sinais    : {total_sinais}\n"
+                f"TFs       : {', '.join(CONFIG['timeframes_ativos'])}\n"
+                f"Favoritos : {len(CONFIG['meus_favoritos'])}\n"
+                f"Filtros   : {', '.join(filtros) if filtros else 'Nenhum'}\n"
+                f"Hora      : {datetime.now().strftime('%d/%m %H:%M')}", cid)
+
+        elif cmd == "/sinais":
+            if not historico_sinais:
+                enviar("📭 Nenhum sinal ainda.", cid)
+            else:
+                linhas = ["📜 <b>Últimos Sinais</b>\n━━━━━━━━━━━━━━━━━━━━━━━"]
+                for s in list(reversed(list(historico_sinais)))[:10]:
+                    e   = "🟢" if s["direcao"] == "COMPRA" else "🔴"
+                    par = TODOS_PARES.get(s["par"], s["par"])
+                    linhas.append(f"{e} {par} | {s['tf']} | {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']} | {converter_hora(s['horario'])}")
+                enviar("\n".join(linhas), cid)
+
+        elif cmd == "/addtf":
+            a = arg.lower()
+            if a not in ["5min","15min","1h","4h"]: enviar("⚠️ Opções: 5min, 15min, 1h, 4h", cid)
+            elif a in CONFIG["timeframes_ativos"]: enviar(f"⚠️ {a} já está ativo.", cid)
+            else: CONFIG["timeframes_ativos"].append(a); enviar(f"✅ {a} adicionado!", cid)
+
+        elif cmd == "/deltf":
+            a = arg.lower()
+            if a in CONFIG["timeframes_ativos"]: CONFIG["timeframes_ativos"].remove(a); enviar(f"✅ {a} removido.", cid)
+            else: enviar(f"⚠️ {a} não encontrado.", cid)
+
+        elif cmd == "/tfs":
+            enviar(f"⏱ <b>Timeframes Ativos</b>\n" +
+                "\n".join(f"  • {t}" for t in CONFIG["timeframes_ativos"]) +
+                "\n\n/addtf X → ativar | /deltf X → desativar", cid)
+
+        elif cmd == "/pausar":
+            CONFIG["pausado"] = True; enviar("⏸ Alertas pausados.", cid)
+
+        elif cmd == "/retomar":
+            CONFIG["pausado"] = False; enviar("▶️ Alertas reativados!", cid)
+
+        elif cmd == "/ajuda":
+            enviar(
+                "📖 <b>Todos os Comandos</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "/status      → estado geral\n"
+                "/sinais      → últimos 10 sinais\n"
+                "/pares       → todos os 17 pares\n"
+                "/tfs         → timeframes\n"
+                "/addtf X     → ativar TF\n"
+                "/deltf X     → desativar TF\n\n"
+                "/favoritos   → seus favoritos\n"
+                "/addfav X    → adicionar\n"
+                "/delfav X    → remover\n\n"
+                "/filtrar X   → filtrar sinais\n"
+                "/limpar      → limpar filtros\n\n"
+                "/pausar      → pausar alertas\n"
+                "/retomar     → retomar alertas", cid)
+
+# ============================================================
+# LOOP PRINCIPAL
+# ============================================================
+def deve_verificar(par, tf):
+    chave = f"{par}_{tf}"; agora = time.time()
+    if agora - ultima_verificacao.get(chave, 0) >= INTERVALOS[tf]:
+        ultima_verificacao[chave] = agora; return True
+    return False
+
+def main():
+    global total_sinais
+    print("=" * 60)
+    print("  SMC FOREX BOT v4.0 — Metodologia Completa")
+    print("  BOS·FBOS·CHoCH·IDM·SMT·OB·FVG·FLiP·IFC·EQH·PDH")
+    print("  Premium/Desconto · 17 Pares · Ouro · Prata")
+    print("=" * 60)
+
+    enviar(
+        "🤖 <b>SMC Forex Bot v4.0 Online!</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "✅ Metodologia SMC completa implementada\n"
+        "✅ Zonas Premium e Desconto\n"
+        "✅ IDM · SMT · IFC · EQH/EQL · PDH/PDL\n"
+        "✅ FLiP Zones (S2D / D2S)\n"
+        "✅ 17 pares + Ouro + Prata\n\n"
+        "Gestão de risco incluída nos sinais\n"
+        "Risco recomendado: 1-2% por trade\n\n"
+        "Use /ajuda para ver todos os comandos.")
+
+    while True:
+        try: processar_comandos()
+        except Exception as e: print(f"Erro cmd: {e}")
+
+        if not CONFIG["pausado"]:
+            for par in CONFIG["pares_ativos"]:
+                for tf in CONFIG["timeframes_ativos"]:
+                    if not deve_verificar(par, tf): continue
+                    par_nome = TODOS_PARES.get(par, par)
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] {par_nome} {tf}")
+                    try:
+                        sinais = analisar_par(par, tf)
+                    except Exception as e:
+                        print(f"Erro análise {par_nome}: {e}"); continue
+
+                    for s in sinais:
+                        if not passar_filtros(s): continue
+                        chave = f"{s['par']}_{s['tf']}_{s['direcao']}_{s['horario']}"
+                        if chave in sinais_enviados: continue
+                        sinais_enviados[chave] = True
+                        total_sinais += 1
+                        historico_sinais.append(s)
+                        par_nome = TODOS_PARES.get(s["par"], s["par"])
+                        print(f"  🚨 {s['direcao']} {par_nome} {s['tf']} {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
+                        enviar(formatar(s))
+                    time.sleep(2)
+
+        time.sleep(10)
+
+if __name__ == "__main__":
+    main()
