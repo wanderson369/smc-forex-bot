@@ -4,7 +4,7 @@ SMC Forex Bot v4.0 — Metodologia Completa
 Baseado no ebook SMC Trading Hub 2023
 
 CONCEITOS IMPLEMENTADOS:
-━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━
 ESTRUTURA:
   - BOS (Break of Structure) — fechamento completo exigido
   - FBOS (Fake BOS) — detecção de falsos rompimentos
