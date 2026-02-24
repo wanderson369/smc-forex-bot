@@ -108,7 +108,7 @@ inicio = datetime.now(BRT).strftime("%d/%m/%Y %H:%M")
 total_sinais       = 0
 
 # ============================================================
-# API TWELVE DATA
+# API FINNHUB
 # ============================================================
 # Mapeamento de timeframes Finnhub
 TF_FINNHUB = {
