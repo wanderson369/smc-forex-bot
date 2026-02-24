@@ -72,16 +72,16 @@ def converter_hora(dt_str):
 # ============================================================
 TELEGRAM_TOKEN   = os.environ.get("TELEGRAM_TOKEN", "SEU_TOKEN_AQUI")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "SEU_CHAT_ID_AQUI")
-TWELVE_API_KEY   = os.environ.get("TWELVE_API_KEY", "SUA_CHAVE_AQUI")
+FINNHUB_API_KEY  = os.environ.get("FINNHUB_API_KEY", "SUA_CHAVE_AQUI")
 
 TODOS_PARES = {
-    "EUR/USD": "OANDAEUR/USD", "GBP/USD": "OANDAGBP/USD", "USD/JPY": "OANDAUSD/JPY",
-    "AUD/USD": "OANDAAUD/USD", "USD/CHF": "OANDAUSD/CHF", "USD/CAD": "OANDAUSD/CAD",
-    "NZD/USD": "OANDANZD/USD", "GBP/CAD": "OANDAGBP/CAD",
-    "EUR/GBP": "OANDAEUR/GBP", "EUR/JPY": "OANDAEUR/JPY", "GBP/JPY": "OANDAGBP/JPY",
-    "AUD/JPY": "OANDAAUD/JPY", "EUR/AUD": "OANDAEUR/AUD", "GBP/AUD": "OANDAGBP/AUD",
-    "XAU/USD": "OANDAXAU/USD",
-    "BTC/USDT": "OANDABTC/USDT",
+    "EUR/USD": "EUR/USD", "GBP/USD": "GBP/USD", "USD/JPY": "USD/JPY",
+    "AUD/USD": "AUD/USD", "USD/CHF": "USD/CHF", "USD/CAD": "USD/CAD",
+    "NZD/USD": "NZD/USD", "GBP/CAD": "GBP/CAD",
+    "EUR/GBP": "EUR/GBP", "EUR/JPY": "EUR/JPY", "GBP/JPY": "GBP/JPY",
+    "AUD/JPY": "AUD/JPY", "EUR/AUD": "EUR/AUD", "GBP/AUD": "GBP/AUD",
+    "XAU/USD": "XAU/USD",
+    "BTC/USDT": "BTC/USDT",
 }
 
 CONFIG = {
