@@ -115,7 +115,7 @@ def buscar_candles(par, timeframe, qtd=80):
         r = requests.get("https://api.twelvedata.com/time_series", params={
             "symbol": par, "interval": timeframe,
             "outputsize": qtd, "apikey": TWELVE_API_KEY, "format": "JSON",
-        }, timeout=5)
+        }, timeout=15)
         data = r.json()
         if data.get("status") == "error":
             return []
