@@ -81,6 +81,7 @@ TODOS_PARES = {
     "EUR/GBP": "EUR/GBP", "EUR/JPY": "EUR/JPY", "GBP/JPY": "GBP/JPY",
     "AUD/JPY": "AUD/JPY", "EUR/AUD": "EUR/AUD", "GBP/AUD": "GBP/AUD",
     "XAU/USD": "XAU/USD",
+    "BTC/USDT": "BTC/USDT",
 }
 
 CONFIG = {
@@ -109,21 +110,76 @@ total_sinais       = 0
 # ============================================================
 # API TWELVE DATA
 # ============================================================
+# Mapeamento de timeframes Finnhub
+TF_FINNHUB = {
+    "1min": "1", "5min": "5", "15min": "15", "30min": "30",
+    "1h": "60", "4h": "240", "1day": "D",
+}
+
+# Mapeamento de simbolos Finnhub
+def par_finnhub(par):
+    # Forex: OANDA:EUR_USD
+    # Crypto: BINANCE:BTCUSDT
+    if "USDT" in par:
+        base = par.replace("/USDT", "").replace("/", "")
+        return f"BINANCE:{base}USDT"
+    else:
+        base = par.replace("/", "_")
+        return f"OANDA:{base}"
+
 def buscar_candles(par, timeframe, qtd=80):
     try:
-        r = requests.get("https://api.twelvedata.com/time_series", params={
-            "symbol": par, "interval": timeframe,
-            "outputsize": qtd, "apikey": TWELVE_API_KEY, "format": "JSON",
+        import time as _time
+        simbolo = par_finnhub(par)
+        tf      = TF_FINNHUB.get(timeframe, "15")
+        agora   = int(_time.time())
+        # Calcular from baseado no timeframe e quantidade
+        segundos_tf = {"1": 60, "5": 300, "15": 900, "30": 1800,
+                       "60": 3600, "240": 14400, "D": 86400}
+        seg = segundos_tf.get(tf, 900)
+        de  = agora - (seg * qtd)
+
+        r = requests.get("https://finnhub.io/api/v1/indicator", params={
+            "symbol": simbolo, "resolution": tf,
+            "from": de, "to": agora,
+            "token": FINNHUB_API_KEY,
         }, timeout=5)
+
+        # Usar endpoint de candles
+        r = requests.get("https://finnhub.io/api/v1/forex/candle", params={
+            "symbol": simbolo, "resolution": tf,
+            "from": de, "to": agora,
+            "token": FINNHUB_API_KEY,
+        }, timeout=5)
+
         data = r.json()
-        if data.get("status") == "error":
+        if data.get("s") == "no_data" or data.get("s") == "error":
+            # Tentar endpoint de crypto
+            r2 = requests.get("https://finnhub.io/api/v1/crypto/candle", params={
+                "symbol": simbolo, "resolution": tf,
+                "from": de, "to": agora,
+                "token": FINNHUB_API_KEY,
+            }, timeout=5)
+            data = r2.json()
+
+        if data.get("s") != "ok":
+            print(f"Finnhub sem dados {par}: {data.get('s','?')}")
             return []
-        return [{"open": float(v["open"]), "high": float(v["high"]),
-                 "low": float(v["low"]), "close": float(v["close"]),
-                 "datetime": v["datetime"]}
-                for v in reversed(data.get("values", []))]
+
+        candles = []
+        for i in range(len(data["c"])):
+            dt = datetime.fromtimestamp(data["t"][i], tz=timezone.utc)
+            candles.append({
+                "open":     data["o"][i],
+                "high":     data["h"][i],
+                "low":      data["l"][i],
+                "close":    data["c"][i],
+                "datetime": dt.strftime("%Y-%m-%d %H:%M:%S"),
+            })
+        return candles
+
     except Exception as e:
-        print(f"Erro API {par} {timeframe}: {e}")
+        print(f"Erro Finnhub {par} {timeframe}: {e}")
         return []
 
 # ============================================================
