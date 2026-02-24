@@ -994,7 +994,6 @@ def main():
                         par_nome = TODOS_PARES.get(s["par"], s["par"])
                         print(f"  🚨 {s['direcao']} {par_nome} {s['tf']} {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
                         enviar(formatar(s))
-                    time.sleep(1)
 
         time.sleep(2)
 
