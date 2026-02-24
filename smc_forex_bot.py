@@ -1054,5 +1054,46 @@ def main():
 
         time.sleep(2)
 
+def main():
+    global total_sinais
+
+    print("="*60)
+    print("🚀 SMC Forex Bot v4.0 iniciado")
+    print("="*60)
+
+    while True:
+        try:
+            processar_comandos()
+
+            if not CONFIG["pausado"]:
+                for par in CONFIG["pares_ativos"]:
+                    for tf in CONFIG["timeframes_ativos"]:
+                        if not deve_verificar(par, tf):
+                            continue
+
+                        sinais = analisar_par(par, tf)
+
+                        for s in sinais:
+                            if not passar_filtros(s):
+                                continue
+
+                            chave = f"{s['par']}_{s['tf']}_{s['direcao']}"
+                            if chave in sinais_enviados:
+                                continue
+
+                            msg = formatar(s)
+                            enviar(msg)
+
+                            sinais_enviados[chave] = time.time()
+                            historico_sinais.append(s)
+                            total_sinais += 1
+
+            time.sleep(5)
+
+        except Exception as e:
+            print("Erro no loop principal:", e)
+            time.sleep(5)
+
+
 if __name__ == "__main__":
     main()
