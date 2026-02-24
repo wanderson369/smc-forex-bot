@@ -46,7 +46,7 @@ GESTÃO:
   - RR alvo 1:5 a 1:10
 """
 
-import os, time, requests, threading
+import os, time, requests
 from datetime import datetime, timezone, timedelta
 from collections import deque
 
@@ -79,10 +79,8 @@ TODOS_PARES = {
     "NZD/USD": "NZD/USD", "GBP/CAD": "GBP/CAD",
     "EUR/GBP": "EUR/GBP", "EUR/JPY": "EUR/JPY", "GBP/JPY": "GBP/JPY",
     "AUD/JPY": "AUD/JPY", "EUR/AUD": "EUR/AUD", "GBP/AUD": "GBP/AUD",
-    "AUD/CHF": "AUD/CHF", "EUR/CHF": "EUR/CHF", "GBP/CHF": "GBP/CHF",
     "XAU/USD": "XAU/USD", "XAG/USD": "XAG/USD",
-    "BTC/USDT": "BTC/USDT", "ETH/USDT": "ETH/USDT", "BNB/USDT": "BNB/USDT",
-    "XRP/USDT": "XRP/USDT", "SOL/USDT": "SOL/USDT",
+    "BTC/USDT": "BTC/USDT",
 }
 
 CONFIG = {
@@ -99,16 +97,8 @@ CONFIG = {
     "meus_favoritos":    [],
 }
 
-INTERVALOS = {
-    "1min": 60, "5min": 300, "15min": 900, "30min": 1800,
-    "1h": 3600, "4h": 14400, "1day": 86400,
-}
-TF_NOMES = {
-    "1min": "M1", "5min": "M5", "15min": "M15", "30min": "M30",
-    "1h": "H1", "4h": "H4", "1day": "D1",
-}
+INTERVALOS = {"5min": 300, "15min": 900, "1h": 3600, "4h": 14400}
 
-lock               = threading.Lock()
 sinais_enviados    = {}
 historico_sinais   = deque(maxlen=200)
 ultima_verificacao = {}
@@ -734,31 +724,17 @@ def formatar(s):
         can_txt = "\n\n🕯 <b>Confirmação de Candle:</b>\n"
         can_txt += "\n".join(f"  {x['emoji']} {x['nome']}" for x in s["candles"][:3])
 
-    # Calcular Stop Loss e Take Profit baseados no nivel do padrao
-    preco  = s["preco"]
-    nivel  = s["smc_principal"].get("nivel", preco)
-    dist   = abs(preco - nivel) if nivel != preco else preco * 0.002
-
-    if s["direcao"] == "COMPRA":
-        sl   = nivel - (dist * 0.3)
-        tp1  = preco + (abs(preco - sl) * 3)
-        tp2  = preco + (abs(preco - sl) * 5)
-        tp3  = preco + (abs(preco - sl) * 10)
-        stop_txt = f"SL: {sl:.5f}"
-    else:
-        sl   = nivel + (dist * 0.3)
-        tp1  = preco - (abs(preco - sl) * 3)
-        tp2  = preco - (abs(preco - sl) * 5)
-        tp3  = preco - (abs(preco - sl) * 10)
-        stop_txt = f"SL: {sl:.5f}"
+    # Sugestão de gestão de risco
+    rr   = "1:5 a 1:10 (excelente)"
+    stop = "Abaixo do OB/FVG" if s["direcao"] == "COMPRA" else "Acima do OB/FVG"
 
     return (
         f"{emoji} <b>SINAL SMC — {par}</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"💱 <b>Par:</b>       {par}\n"
-        f"⏱ <b>Timeframe:</b> {TF_NOMES.get(s['tf'], s['tf'])}\n"
-        f"🎯 <b>Direcao:</b>   {s['direcao']}\n"
-        f"💰 <b>Preco:</b>     {s['preco']:.5f}\n"
+        f"⏱ <b>Timeframe:</b> {s['tf'].upper()}\n"
+        f"🎯 <b>Direção:</b>   {s['direcao']}\n"
+        f"💰 <b>Preço:</b>     {s['preco']:.5f}\n"
         f"🗺 <b>Zona:</b>     {zona_t} ({s['zona_pct']:.0f}%)\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"📊 <b>Probabilidade: {prob}%</b>\n"
@@ -900,7 +876,7 @@ def processar_comandos():
                 f"Estado    : {'⏸ Pausado' if CONFIG['pausado'] else '▶️ Ativo'}\n"
                 f"Online    : {inicio}\n"
                 f"Sinais    : {total_sinais}\n"
-                f"TFs       : {', '.join(TF_NOMES.get(t,t) for t in CONFIG['timeframes_ativos'])}\n"
+                f"TFs       : {', '.join(CONFIG['timeframes_ativos'])}\n"
                 f"Favoritos : {len(CONFIG['meus_favoritos'])}\n"
                 f"Filtros   : {', '.join(filtros) if filtros else 'Nenhum'}\n"
                 f"Hora      : {datetime.now().strftime('%d/%m %H:%M')}", cid)
@@ -985,59 +961,34 @@ def main():
         "Risco recomendado: 1-2% por trade\n\n"
         "Use /ajuda para ver todos os comandos.")
 
-    def loop_analise():
-        global total_sinais
-        idx_par = 0
-        idx_tf  = 0
-        ult_req = 0
-        while True:
-            try:
-                if not CONFIG["pausado"]:
-                    pares = list(CONFIG["pares_ativos"])
-                    tfs   = list(CONFIG["timeframes_ativos"])
-                    if pares and tfs:
-                        agora = time.time()
-                        if agora - ult_req >= 8:
-                            idx_par = idx_par % len(pares)
-                            idx_tf  = idx_tf  % len(tfs)
-                            par = pares[idx_par]
-                            tf  = tfs[idx_tf]
-                            chave_tf = f"{par}_{tf}"
-                            if agora - ultima_verificacao.get(chave_tf, 0) >= INTERVALOS[tf]:
-                                ultima_verificacao[chave_tf] = agora
-                                ult_req = agora
-                                tn = TF_NOMES.get(tf, tf)
-                                print(f"[{agora_brt()}] {par} {tn}")
-                                try:
-                                    sinais = analisar_par(par, tf)
-                                    for s in sinais:
-                                        if not passar_filtros(s): continue
-                                        k = f"{s['par']}_{s['tf']}_{s['direcao']}_{s['horario']}"
-                                        if k in sinais_enviados: continue
-                                        with lock:
-                                            sinais_enviados[k] = True
-                                            total_sinais += 1
-                                            historico_sinais.append(s)
-                                        tn2 = TF_NOMES.get(s["tf"], s["tf"])
-                                        print(f"  >> {s['direcao']} {s['par']} {tn2} {s['prob']}% {s['smc_principal']['padrao']} {s['zona']}")
-                                        enviar(formatar(s))
-                                except Exception as e:
-                                    print(f"Erro {par}: {e}")
-                            idx_tf += 1
-                            if idx_tf >= len(tfs):
-                                idx_tf = 0
-                                idx_par += 1
-            except Exception as e:
-                print(f"Erro loop analise: {e}")
-            time.sleep(0.5)
-
-    t = threading.Thread(target=loop_analise, daemon=True)
-    t.start()
-    print(f"[{agora_brt()}] Thread analise iniciada")
-
     while True:
-        try:
-            processar_comandos()
-        except Exception as e:
-            print(f"Erro cmd: {e}")
-        time.sleep(2)
+        try: processar_comandos()
+        except Exception as e: print(f"Erro cmd: {e}")
+
+        if not CONFIG["pausado"]:
+            for par in CONFIG["pares_ativos"]:
+                for tf in CONFIG["timeframes_ativos"]:
+                    if not deve_verificar(par, tf): continue
+                    par_nome = TODOS_PARES.get(par, par)
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] {par_nome} {tf}")
+                    try:
+                        sinais = analisar_par(par, tf)
+                    except Exception as e:
+                        print(f"Erro análise {par_nome}: {e}"); continue
+
+                    for s in sinais:
+                        if not passar_filtros(s): continue
+                        chave = f"{s['par']}_{s['tf']}_{s['direcao']}_{s['horario']}"
+                        if chave in sinais_enviados: continue
+                        sinais_enviados[chave] = True
+                        total_sinais += 1
+                        historico_sinais.append(s)
+                        par_nome = TODOS_PARES.get(s["par"], s["par"])
+                        print(f"  🚨 {s['direcao']} {par_nome} {s['tf']} {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
+                        enviar(formatar(s))
+                    time.sleep(2)
+
+        time.sleep(10)
+
+if __name__ == "__main__":
+    main()
