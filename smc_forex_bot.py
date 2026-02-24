@@ -289,7 +289,7 @@ def detectar_pdh_pdl(candles):
         sinais.append({
             "padrao": "PDL Sweep", "dir": "COMPRA",
             "nivel": pdl, "prob_base": 65,
-            "desc" f"Preco varreu PDL {pdl:.5f} - liquidez diaria coletada"
+            "desc": f"Preco varreu PDL {pdl:.5f} - liquidez diaria coletada"
         })
     return sinais
 
