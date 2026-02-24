@@ -80,7 +80,7 @@ TODOS_PARES = {
     "NZD/USD": "NZD/USD", "GBP/CAD": "GBP/CAD",
     "EUR/GBP": "EUR/GBP", "EUR/JPY": "EUR/JPY", "GBP/JPY": "GBP/JPY",
     "AUD/JPY": "AUD/JPY", "EUR/AUD": "EUR/AUD", "GBP/AUD": "GBP/AUD",
-    "XAU/USD": "XAU/USD", "XAG/USD": "XAG/USD",
+    "XAU/USD": "XAU/USD",
     "BTC/USDT": "BTC/USDT",
 }
 
@@ -115,7 +115,7 @@ def buscar_candles(par, timeframe, qtd=80):
         r = requests.get("https://api.twelvedata.com/time_series", params={
             "symbol": par, "interval": timeframe,
             "outputsize": qtd, "apikey": TWELVE_API_KEY, "format": "JSON",
-        }, timeout=15)
+        }, timeout=5)
         data = r.json()
         if data.get("status") == "error":
             return []
@@ -783,7 +783,7 @@ def buscar_updates():
     if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI": return []
     try:
         r = requests.get(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates",
-            params={"offset": ultimo_update_id + 1, "timeout": 3}, timeout=8)
+            params={"offset": ultimo_update_id + 1, "timeout": 1}, timeout=4)
         upds = r.json().get("result", [])
         if upds: ultimo_update_id = upds[-1]["update_id"]
         return upds
@@ -995,9 +995,9 @@ def main():
                         par_nome = TODOS_PARES.get(s["par"], s["par"])
                         print(f"  🚨 {s['direcao']} {par_nome} {s['tf']} {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
                         enviar(formatar(s))
-                    time.sleep(2)
+                    time.sleep(1)
 
-        time.sleep(10)
+        time.sleep(2)
 
 if __name__ == "__main__":
     main()
