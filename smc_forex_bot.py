@@ -995,7 +995,6 @@ def main():
                         print(f"  🚨 {s['direcao']} {par_nome} {s['tf']} {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
                         enviar(formatar(s))
 
-        time.sleep(2)
-
-if __name__ == "__main__":
-    main()
+     if __name__ == "__main__":
+     main()
+     time.sleep(60)
