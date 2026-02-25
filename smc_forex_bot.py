@@ -292,8 +292,8 @@ def detectar_idm(candles):
                 "prob_base": prob,
                 "desc": desc
             })
-sinais = [s for s in sinais if not (s["dir"] == "VENDA" and c[-1].get("regiao", "") == "DESCONTO")]
-sinais = [s for s in sinais if not (s["dir"] == "COMPRA" and c[-1].get("regiao", "") == "PREMIUM")]
+    sinais = [s for s in sinais if not (s["dir"] == "VENDA" and c[-1].get("regiao", "") == "DESCONTO")]
+    sinais = [s for s in sinais if not (s["dir"] == "COMPRA" and c[-1].get("regiao", "") == "PREMIUM")]
   
     return sinais
 
