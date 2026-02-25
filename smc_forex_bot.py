@@ -1020,7 +1020,7 @@ def main():
                         par_nome = TODOS_PARES.get(s["par"], s["par"])
                         print(f"  🚨 {s['direcao']} {par_nome} {s['tf']} {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
                         msg = formatar(s)
-                        enviar_telegram(msg)
+                        enviar(msg)
                       
                 time.sleep(1)  # Pausa pequena
 
