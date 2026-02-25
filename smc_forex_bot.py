@@ -247,54 +247,26 @@ def detectar_idm(candles):
     sinais = []
     c = candles
 
-# --- IDM Bearish: topo menor após CHoCH (induz compra antes de cair) ---
-    if (c[-5]["high"] < c[-4]["high"] and     # topo menor crescendo (parece alta)
-        c[-3]["high"] < c[-4]["high"] and     # mas nao supera
-        c[-1]["close"] < c[-3]["low"]):       # e agora quebra estrutura real
-        padrao = "IDM Bearish"
-        dir_sinal = "VENDA"
-        nivel = c[-4]["high"]
-        desc = f"Inducement varrido em {nivel:.5f} - armadilha identificada, queda real iniciando"
-        prob = 73
-        regiao = c[-4].get("regiao", "EQUILIBRIO")  # PREMIUM/DESCONTO/EQUILIBRIO
+    # --- IDM Bearish: topo menor apos CHoCH (induz compra antes de cair) ---
+    if (c[-5]["high"] < c[-4]["high"] and   # topo menor crescendo (parece alta)
+        c[-3]["high"] < c[-4]["high"] and   # mas nao supera o anterior
+        c[-1]["close"] < c[-3]["low"]):     # e agora quebra estrutura real
+        sinais.append({
+            "padrao": "IDM Bearish", "dir": "VENDA",
+            "nivel": c[-4]["high"], "prob_base": 73,
+            "desc": f"Inducement varrido em {c[-4]['high']:.5f} - armadilha identificada"
+        })
 
-        # Bloqueio de sinal indevido
-        if regiao == "DESCONTO" and dir_sinal == "VENDA":
-            pass  # ignora venda em região de DESCONTO
-        else:
-            sinais.append({
-                "padrao": padrao,
-                "dir": dir_sinal,
-                "nivel": nivel,
-                "prob_base": prob,
-                "desc": desc
-            })
-
-    # --- IDM Bullish: fundo menor após CHoCH (induz venda antes de subir) ---
-    if (c[-5]["low"] > c[-4]["low"] and     # fundo menor caindo (parece baixa) 
-        c[-3]["low"] > c[-4]["low"] and     # mas nao supera
+    # --- IDM Bullish: fundo menor apos CHoCH (induz venda antes de subir) ---
+    if (c[-5]["low"] > c[-4]["low"] and     # fundo menor caindo (parece baixa)
+        c[-3]["low"] > c[-4]["low"] and     # mas nao supera o anterior
         c[-1]["close"] > c[-3]["high"]):    # e agora quebra estrutura real
-        padrao = "IDM Bullish"
-        dir_sinal = "COMPRA"
-        nivel = c[-4]["low"]
-        desc = f"Inducement varrido em {nivel:.5f} - armadilha identificada, alta real iniciando"
-        prob = 73
-        regiao = c[-4].get("regiao", "EQUILIBRIO")  # PREMIUM/DESCONTO/EQUILIBRIO
+        sinais.append({
+            "padrao": "IDM Bullish", "dir": "COMPRA",
+            "nivel": c[-4]["low"], "prob_base": 73,
+            "desc": f"Inducement varrido em {c[-4]['low']:.5f} - armadilha identificada"
+        })
 
-        # Bloqueio de sinal indevido
-        if regiao == "PREMIUM" and dir_sinal == "COMPRA":
-            pass  # ignora compra em região de PREMIUM
-        else:
-            sinais.append({
-                "padrao": padrao,
-                "dir": dir_sinal,
-                "nivel": nivel,
-                "prob_base": prob,
-                "desc": desc
-            })
-    
-    sinais = [s for s in sinais if not (s["dir"] == "VENDA" and c[-1].get("regiao", "") == "DESCONTO")]
-    sinais = [s for s in sinais if not (s["dir"] == "COMPRA" and c[-1].get("regiao", "") == "PREMIUM")]
     return sinais
 
 def detectar_ifc(candles):
@@ -678,16 +650,19 @@ def analisar_par(par, tf):
         direcao = smc["dir"]
         prob    = smc["prob_base"]
 
-        # Bonus/Penalidade por zona Premium/Desconto
-        # Regra SMC: compra so em desconto, venda so em premium
+        # BLOQUEIO ABSOLUTO por zona - regra SMC fundamental
+        # COMPRA so em DESCONTO ou EQUILIBRIO
+        # VENDA so em PREMIUM ou EQUILIBRIO
+        if direcao == "COMPRA" and zona == "PREMIUM":
+            continue  # BLOQUEADO - nunca comprar em Premium
+        if direcao == "VENDA" and zona == "DESCONTO":
+            continue  # BLOQUEADO - nunca vender em Desconto
+
+        # Bonus por zona correta
         if direcao == "COMPRA" and zona == "DESCONTO":
-            prob += 8   # zona correta para compra
+            prob += 8
         elif direcao == "VENDA" and zona == "PREMIUM":
-            prob += 8   # zona correta para venda
-        elif direcao == "COMPRA" and zona == "PREMIUM":
-            prob -= 10  # compra em zona de premium = perigoso
-        elif direcao == "VENDA" and zona == "DESCONTO":
-            prob -= 10  # venda em zona de desconto = perigoso
+            prob += 8
 
         # Bonus por candles na mesma direcao
         can_favor = [c for c in can_list if c["dir"] in [direcao, "NEUTRO"]]
@@ -1020,18 +995,18 @@ def main():
                         total_sinais += 1
                         historico_sinais.append(s)
                         par_nome = TODOS_PARES.get(s["par"], s["par"])
-                        print(f"  🚨 {s['direcao']} {par_nome} {s['tf']} {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
+                        print(f"  >> {s['direcao']} {par_nome} {s['tf']} {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
                         msg = formatar(s)
                         enviar(msg)
                       
                 time.sleep(1)  # Pausa pequena
 
 if __name__ == "__main__":
-    print("🚀 SMC Forex Bot v4.0 ATIVO 24h!")
+    print("SMC Forex Bot v4.0 ATIVO 24h!")
     while True:
         try:
             main()
             time.sleep(60)
         except Exception as e:
-            print(f"❌ Erro: {e}")
+            print(f"Erro: {e}")
             time.sleep(30)
