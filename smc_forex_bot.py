@@ -1019,7 +1019,8 @@ def main():
                         historico_sinais.append(s)
                         par_nome = TODOS_PARES.get(s["par"], s["par"])
                         print(f"  🚨 {s['direcao']} {par_nome} {s['tf']} {s['prob']}% | {s['smc_principal']['padrao']} | {s['zona']}")
-                        enviar(formatar(s))
+                        msg = formatar(s)
+                        enviar_telegram(msg)
                       
         if __name__ == "__main__":
            time.sleep(60)
