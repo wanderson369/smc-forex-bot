@@ -1022,7 +1022,14 @@ def main():
                         msg = formatar(s)
                         enviar_telegram(msg)
                       
-        if __name__ == "__main__":
-           while True:
-               main()
-               time.sleep(60)
+                time.sleep(1)  # Pausa pequena
+
+if __name__ == "__main__":
+    print("🚀 SMC Forex Bot v4.0 ATIVO 24h!")
+    while True:
+        try:
+            main()
+            time.sleep(60)
+        except Exception as e:
+            print(f"❌ Erro: {e}")
+            time.sleep(30)
