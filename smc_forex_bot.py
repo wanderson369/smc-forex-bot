@@ -247,23 +247,41 @@ def detectar_idm(candles):
     sinais = []
     c = candles
 
-    # IDM Bearish: topo menor apos CHoCH - induz compra antes de cair
-    if (c[-5]["high"] < c[-4]["high"] and      # topo menor crescendo (parece alta)
-        c[-3]["high"] < c[-4]["high"] and       # mas nao supera
-        c[-1]["close"] < c[-3]["low"]):         # e agora quebra estrutura real
+    # IDM Bearish: topo menor apos CHocH - induz compra antes de cair
+if (c[-5]["high"] < c[-4]["high"] and  # topo menor crescendo (parece alta)
+    c[-3]["high"] < c[-4]["high"] and  # mas nao supera 
+    c[-1]["close"] < c[-3]["low"]):  # e agora quebra estrutura real 
+    
+    regiao = c[-4]["regiao"]  # assumindo que você já marcou Premium/Desconto/Equilibrio
+    dir = "VENDA"
+    
+    if dir == "VENDA" and regiao == "DESCONTO":
+        pass  # ignora venda em região de desconto
+    else:
         sinais.append({
-            "padrao": "IDM Bearish", "dir": "VENDA",
-            "nivel": c[-4]["high"], "prob_base": 73,
+            "padrao": "IDM Bearish",
+            "dir": dir,
+            "nivel": c[-4]["high"],
+            "prob_base": 73,
             "desc": f"Inducement varrido em {c[-4]['high']:.5f} - armadilha identificada, queda real iniciando"
         })
 
     # IDM Bullish: fundo menor apos CHoCH - induz venda antes de subir
-    if (c[-5]["low"] > c[-4]["low"] and         # fundo menor caindo (parece baixa)
-        c[-3]["low"] > c[-4]["low"] and          # mas nao supera
-        c[-1]["close"] > c[-3]["high"]):         # e agora quebra estrutura real
+if (c[-5]["low"] > c[-4]["low"] and  # fundo menor caindo (parece baixa)
+    c[-3]["low"] > c[-4]["low"] and  # mas nao supera
+    c[-1]["close"] > c[-3]["high"]):  # e agora quebra estrutura real
+
+    regiao = c[-4]["regiao"]
+    dir = "COMPRA"
+    
+    if dir == "COMPRA" and regiao == "PREMIUM":
+        pass  # ignora compra em região Premium
+    else:
         sinais.append({
-            "padrao": "IDM Bullish", "dir": "COMPRA",
-            "nivel": c[-4]["low"], "prob_base": 73,
+            "padrao": "IDM Bullish",
+            "dir": dir,
+            "nivel": c[-4]["low"],
+            "prob_base": 73,
             "desc": f"Inducement varrido em {c[-4]['low']:.5f} - armadilha identificada, alta real iniciando"
         })
 
