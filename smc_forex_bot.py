@@ -247,43 +247,51 @@ def detectar_idm(candles):
     sinais = []
     c = candles
 
-    # IDM Bearish: topo menor apos CHocH - induz compra antes de cair
-if (c[-5]["high"] < c[-4]["high"] and  # topo menor crescendo (parece alta)
-    c[-3]["high"] < c[-4]["high"] and  # mas nao supera 
-    c[-1]["close"] < c[-3]["low"]):  # e agora quebra estrutura real 
-    
-    regiao = c[-4]["regiao"]  # assumindo que você já marcou Premium/Desconto/Equilibrio
-    dir = "VENDA"
-    
-    if dir == "VENDA" and regiao == "DESCONTO":
-        pass  # ignora venda em região de desconto
-    else:
-        sinais.append({
-            "padrao": "IDM Bearish",
-            "dir": dir,
-            "nivel": c[-4]["high"],
-            "prob_base": 73,
-            "desc": f"Inducement varrido em {c[-4]['high']:.5f} - armadilha identificada, queda real iniciando"
-        })
+# --- IDM Bearish: topo menor após CHoCH (induz compra antes de cair) ---
+    if (c[-5]["high"] < c[-4]["high"] and     # topo menor crescendo (parece alta)
+        c[-3]["high"] < c[-4]["high"] and     # mas nao supera
+        c[-1]["close"] < c[-3]["low"]):       # e agora quebra estrutura real
+        padrao = "IDM Bearish"
+        dir_sinal = "VENDA"
+        nivel = c[-4]["high"]
+        desc = f"Inducement varrido em {nivel:.5f} - armadilha identificada, queda real iniciando"
+        prob = 73
+        regiao = c[-4].get("regiao", "EQUILIBRIO")  # PREMIUM/DESCONTO/EQUILIBRIO
 
-    # IDM Bullish: fundo menor apos CHoCH - induz venda antes de subir
-if (c[-5]["low"] > c[-4]["low"] and  # fundo menor caindo (parece baixa)
-    c[-3]["low"] > c[-4]["low"] and  # mas nao supera
-    c[-1]["close"] > c[-3]["high"]):  # e agora quebra estrutura real
+        # Bloqueio de sinal indevido
+        if regiao == "DESCONTO" and dir_sinal == "VENDA":
+            pass  # ignora venda em região de DESCONTO
+        else:
+            sinais.append({
+                "padrao": padrao,
+                "dir": dir_sinal,
+                "nivel": nivel,
+                "prob_base": prob,
+                "desc": desc
+            })
 
-    regiao = c[-4]["regiao"]
-    dir = "COMPRA"
-    
-    if dir == "COMPRA" and regiao == "PREMIUM":
-        pass  # ignora compra em região Premium
-    else:
-        sinais.append({
-            "padrao": "IDM Bullish",
-            "dir": dir,
-            "nivel": c[-4]["low"],
-            "prob_base": 73,
-            "desc": f"Inducement varrido em {c[-4]['low']:.5f} - armadilha identificada, alta real iniciando"
-        })
+    # --- IDM Bullish: fundo menor após CHoCH (induz venda antes de subir) ---
+    if (c[-5]["low"] > c[-4]["low"] and     # fundo menor caindo (parece baixa) 
+        c[-3]["low"] > c[-4]["low"] and     # mas nao supera
+        c[-1]["close"] > c[-3]["high"]):    # e agora quebra estrutura real
+        padrao = "IDM Bullish"
+        dir_sinal = "COMPRA"
+        nivel = c[-4]["low"]
+        desc = f"Inducement varrido em {nivel:.5f} - armadilha identificada, alta real iniciando"
+        prob = 73
+        regiao = c[-4].get("regiao", "EQUILIBRIO")  # PREMIUM/DESCONTO/EQUILIBRIO
+
+        # Bloqueio de sinal indevido
+        if regiao == "PREMIUM" and dir_sinal == "COMPRA":
+            pass  # ignora compra em região de PREMIUM
+        else:
+            sinais.append({
+                "padrao": padrao,
+                "dir": dir_sinal,
+                "nivel": nivel,
+                "prob_base": prob,
+                "desc": desc
+            })
 
     return sinais
 
