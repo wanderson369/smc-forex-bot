@@ -1023,5 +1023,6 @@ def main():
                         enviar_telegram(msg)
                       
         if __name__ == "__main__":
-           time.sleep(60)
-           main()
+           while True:
+               main()
+               time.sleep(60)
