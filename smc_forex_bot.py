@@ -1022,5 +1022,5 @@ def main():
                         enviar(formatar(s))
 
         if __name__ == "__main__":
-        main()
-        time.sleep(60)
+            main()
+            time.sleep(60)
